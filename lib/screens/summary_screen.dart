@@ -129,40 +129,56 @@ class _SummaryScreenState extends State<SummaryScreen> {
       _aiError = null;
     });
 
+    final api = BackendApiService(baseUrl: baseUrl);
+    final errors = <String>[];
+
     try {
-      final api = BackendApiService(baseUrl: baseUrl);
-      final insights = await api.monthlyInsights(
-        month: monthKey,
-        total: total,
-        previousTotal: prevTotal,
-        byCategory: byCategory,
-        currency: settings.currency,
-      );
-      BudgetAdviceResult? advice;
-      if (includeBudget) {
-        advice = await api.budgetAdvice(
-          monthlyBudget: settings.monthlyBudget,
-          spentThisMonth: total,
-          avgDaily: dailyAvg,
-          daysLeft: daysLeft,
-          byCategory: byCategory
-              .map((e) => {'name': e['name'], 'amount': e['amount']})
-              .toList(),
+      try {
+        final insights = await api.monthlyInsights(
+          month: monthKey,
+          total: total,
+          previousTotal: prevTotal,
+          byCategory: byCategory,
           currency: settings.currency,
         );
+        if (mounted) setState(() => _insights = insights);
+      } catch (e) {
+        errors.add(e.toString().replaceFirst('Exception: ', ''));
       }
-      if (!mounted) return;
-      setState(() {
-        _insights = insights;
-        if (advice != null) _budgetAdvice = advice;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _aiError = e.toString().replaceFirst('Exception: ', '');
-      });
+
+      if (includeBudget) {
+        try {
+          final advice = await api.budgetAdvice(
+            monthlyBudget: settings.monthlyBudget,
+            spentThisMonth: total,
+            avgDaily: dailyAvg,
+            daysLeft: daysLeft,
+            byCategory: byCategory
+                .map((e) => {'name': e['name'], 'amount': e['amount']})
+                .toList(),
+            currency: settings.currency,
+          );
+          if (mounted) setState(() => _budgetAdvice = advice);
+        } catch (e) {
+          errors.add(e.toString().replaceFirst('Exception: ', ''));
+        }
+      }
     } finally {
-      if (mounted) setState(() => _aiLoading = false);
+      if (!mounted) return;
+      final hasAny = _insights != null || _budgetAdvice != null;
+      // Only show a hard error when nothing useful came back.
+      setState(() {
+        _aiError = (!hasAny && errors.isNotEmpty) ? errors.join('\n') : null;
+        _aiLoading = false;
+      });
+      if (hasAny && errors.isNotEmpty && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Loaded available AI tips (one request was empty).'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
