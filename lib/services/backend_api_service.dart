@@ -159,7 +159,7 @@ class BackendApiService {
   static String _isoDay(DateTime day) =>
       '${day.year.toString().padLeft(4, '0')}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
 
-  Future<ParsedExpense> parseExpense({
+  Future<List<ParsedExpense>> parseExpense({
     required String text,
     required List<String> categories,
     DateTime? today,
@@ -173,7 +173,22 @@ class BackendApiService {
     if (data is! Map<String, dynamic>) {
       throw Exception('AI response missing data');
     }
-    return ParsedExpense.fromJson(data);
+
+    // New shape: { expenses: [...] }. Legacy single object still accepted.
+    final rawList = data['expenses'];
+    if (rawList is List) {
+      if (rawList.isEmpty) {
+        throw Exception('AI found no expenses in that text');
+      }
+      return rawList
+          .whereType<Map>()
+          .map((e) => ParsedExpense.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+    if (data['amount'] != null) {
+      return [ParsedExpense.fromJson(data)];
+    }
+    throw Exception('AI response missing expenses');
   }
 
   Future<CategorySuggestResult> suggestCategory({

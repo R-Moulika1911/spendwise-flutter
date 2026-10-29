@@ -5,9 +5,9 @@ import '../providers/category_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/backend_api_service.dart';
 import '../widgets/app_scaffold.dart';
-import 'confirm_parsed_expense_screen.dart';
+import '../widgets/confirm_parsed_expenses_dialog.dart';
 
-/// One-line natural language expense entry → confirm screen.
+/// One-line natural language expense entry → confirm table → save.
 class QuickAddAiScreen extends StatefulWidget {
   const QuickAddAiScreen({super.key});
 
@@ -57,14 +57,16 @@ class _QuickAddAiScreenState extends State<QuickAddAiScreen> {
       final api = BackendApiService(baseUrl: baseUrl);
       final parsed = await api.parseExpense(text: text, categories: names);
       if (!mounted) return;
-      await Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => ConfirmParsedExpenseScreen(
-            parsed: parsed,
-            originalText: text,
-          ),
-        ),
+
+      final saved = await showConfirmParsedExpensesDialog(
+        context: context,
+        expenses: parsed,
+        originalText: text,
       );
+      if (!mounted) return;
+      if (saved) {
+        Navigator.of(context).pop();
+      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
@@ -84,14 +86,14 @@ class _QuickAddAiScreenState extends State<QuickAddAiScreen> {
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
         children: [
           Text(
-            'Describe the expense in one line',
+            'Describe one or more expenses',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Examples: “Yesterday lunch 250”, “Auto 80 rupees”, “Swiggy 420 today”',
+            'Examples: “Yesterday lunch 250”, “Coffee 80 and auto 60 on 28 Oct”, “Swiggy 420 today, milk 50 yesterday”',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context)
                       .colorScheme
@@ -105,12 +107,12 @@ class _QuickAddAiScreenState extends State<QuickAddAiScreen> {
             focusNode: _focus,
             autofocus: true,
             textInputAction: TextInputAction.send,
-            maxLength: 200,
+            maxLength: 500,
             minLines: 2,
-            maxLines: 4,
+            maxLines: 5,
             enabled: !_loading,
             decoration: const InputDecoration(
-              hintText: 'Yesterday lunch 250',
+              hintText: 'Lunch 250 and auto 80 yesterday',
               alignLabelWithHint: true,
             ),
             onSubmitted: (_) => _loading ? null : _parse(),
@@ -144,7 +146,7 @@ class _QuickAddAiScreenState extends State<QuickAddAiScreen> {
           ),
           const SizedBox(height: 12),
           Text(
-            'Your text is sent to the SpendWise backend (Groq). Nothing is saved until you confirm.',
+            'You’ll see a confirmation table first. Expenses are saved only after you tap Save.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context)
                       .colorScheme

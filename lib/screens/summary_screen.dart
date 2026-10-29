@@ -7,6 +7,7 @@ import '../providers/expense_provider.dart';
 import '../providers/settings_provider.dart';
 import '../services/backend_api_service.dart';
 import '../utils/formatters.dart';
+import '../widgets/ai_insights_panel.dart';
 import '../widgets/category_donut_chart.dart';
 import '../widgets/daily_bar_chart.dart';
 import '../widgets/empty_state.dart';
@@ -185,7 +186,8 @@ class _SummaryScreenState extends State<SummaryScreen> {
   @override
   Widget build(BuildContext context) {
     final categories = context.watch<CategoryProvider>();
-    final currency = context.watch<SettingsProvider>().currency;
+    final settings = context.watch<SettingsProvider>();
+    final currency = settings.currency;
 
     // Refresh when expenses change.
     context.watch<ExpenseProvider>();
@@ -336,6 +338,20 @@ class _SummaryScreenState extends State<SummaryScreen> {
                                 ],
                               ),
                               const SizedBox(height: 20),
+                              AiInsightsPanel(
+                                currency: currency,
+                                total: total,
+                                previousTotal: prevTotal,
+                                slices: slices,
+                                monthlyBudget: settings.monthlyBudget,
+                                insights: _insights,
+                                budgetAdvice: _budgetAdvice,
+                                loading: _aiLoading,
+                                error: _aiError,
+                                onGenerate: () =>
+                                    _loadAiInsights(includeBudget: true),
+                              ),
+                              const SizedBox(height: 20),
                               Text(
                                 'By category',
                                 style: Theme.of(context).textTheme.titleMedium,
@@ -415,115 +431,6 @@ class _SummaryScreenState extends State<SummaryScreen> {
                                 child: DailyBarChart(
                                   dailyTotals: daily,
                                   month: _month,
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              Text(
-                                'AI insights',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              const SizedBox(height: 8),
-                              _SummaryCard(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Uses category totals only — not individual notes.',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                                .withValues(alpha: 0.55),
-                                          ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    if (_aiError != null)
-                                      Padding(
-                                        padding: const EdgeInsets.only(bottom: 8),
-                                        child: Text(
-                                          _aiError!,
-                                          style: TextStyle(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .error,
-                                          ),
-                                        ),
-                                      ),
-                                    if (_insights != null) ...[
-                                      Text(_insights!.summary),
-                                      if (_insights!.tips.isNotEmpty) ...[
-                                        const SizedBox(height: 10),
-                                        for (final tip in _insights!.tips)
-                                          Padding(
-                                            padding:
-                                                const EdgeInsets.only(bottom: 4),
-                                            child: Text('• $tip'),
-                                          ),
-                                      ],
-                                      const SizedBox(height: 12),
-                                    ],
-                                    if (_budgetAdvice != null) ...[
-                                      Text(
-                                        'Budget advice',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleSmall
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      if (_budgetAdvice!.alert != null)
-                                        Padding(
-                                          padding:
-                                              const EdgeInsets.only(bottom: 6),
-                                          child: Text(
-                                            _budgetAdvice!.alert!,
-                                            style: TextStyle(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .error,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ),
-                                      Text(_budgetAdvice!.advice),
-                                      if (_budgetAdvice!.suggestedBudget !=
-                                          null) ...[
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          'Suggested budget: ${Formatters.money(_budgetAdvice!.suggestedBudget!, currency)}',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .labelLarge,
-                                        ),
-                                      ],
-                                      const SizedBox(height: 12),
-                                    ],
-                                    FilledButton.tonal(
-                                      onPressed: _aiLoading
-                                          ? null
-                                          : () => _loadAiInsights(
-                                                includeBudget: true,
-                                              ),
-                                      child: _aiLoading
-                                          ? const SizedBox(
-                                              width: 18,
-                                              height: 18,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                              ),
-                                            )
-                                          : Text(
-                                              _insights == null
-                                                  ? 'Generate insights & budget tips'
-                                                  : 'Refresh AI insights',
-                                            ),
-                                    ),
-                                  ],
                                 ),
                               ),
                             ],

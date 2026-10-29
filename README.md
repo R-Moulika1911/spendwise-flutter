@@ -14,7 +14,7 @@ Flutter expense tracker with offline SQLite storage, optional Firebase Auth + Fi
 - **CSV export** (share sheet)
 - **Firebase Auth + Firestore sync** (after you configure Firebase)
 - Optional **REST backend** (`../spendwise-backend`)
-- **AI Quick add** (natural language → confirm → save; Groq via backend)
+- **AI Quick add** (natural language → confirm table for one or many → save; Groq via backend)
 - **Auto category suggestion** (keyword rules + optional LLM)
 - **Ask expenses** chat agent (tool calling; SQLite tools run on device)
 - **Monthly AI insights** + **budget advice** (aggregates only)
